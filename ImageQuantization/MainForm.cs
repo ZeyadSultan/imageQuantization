@@ -14,7 +14,7 @@ namespace ImageQuantization
         public static int distinct_colors = 0;
         public static RGBPixel[] distColors = new RGBPixel[100000];
         public static double[,] edgeWeight = new double[distinct_colors, distinct_colors];
-        public static List<KeyValuePair<int, double>>[] vertix = new List<KeyValuePair<int, double>>[distinct_colors];
+        public static List<KeyValuePair<int, double>>[] vertixEdges = new List<KeyValuePair<int, double>>[distinct_colors];
         public MainForm()
         {
             InitializeComponent();
@@ -87,7 +87,7 @@ namespace ImageQuantization
                         edgeWeight[i, j] = Math.Sqrt(Math.Pow((distColors[i].red) - (distColors[j].red), 2) +
                             Math.Pow((distColors[i].blue) - (distColors[j].blue), 2) +
                             Math.Pow((distColors[i].green) - (distColors[j].green), 2));
-                        vertix[i].Add(new KeyValuePair<int, double>(j, edgeWeight[i, j]));
+                        vertixEdges[i].Add(new KeyValuePair<int, double>(j, edgeWeight[i, j]));
                     }
                 }
             }
