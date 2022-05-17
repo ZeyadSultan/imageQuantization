@@ -13,7 +13,11 @@ namespace ImageQuantization
     {
         public static List<RGBPixel> distinctColors = new List<RGBPixel>();
         public static Dictionary<RGBPixel, List<RGBPixel>> edges = new Dictionary<RGBPixel, List<RGBPixel>>();
-        
+
+        public static byte clusterSize;
+        public static int j = 0;
+        public static RGBPixel[] colorCluster;
+        public static List<int>[] children;
         public static int[] rootNode;
         public static double[] colorWeight;
         public static double mst_total_cost = 0;
@@ -159,24 +163,72 @@ namespace ImageQuantization
                 colorWeight[hekha] = -1;
             }
         }
+        public static string[] color = new string[distinctColors.Count];
 
-        public static void makeChildren()
+        public static void makeChildren(int numOfClusters)
         {
             //adding the children of each node in the clusters
-            List<int>[] children = new List<int>[distinctColors.Count];
+            children = new List<int>[distinctColors.Count];
             for (int i = 0; i < distinctColors.Count; i++)
             {
-                children[i] = new List<int>(distinctColors.Count); //------> O(1)
+                children[i] = new List<int>(distinctColors.Count);
             }
             for (int i = 0; i < distinctColors.Count; i++)
             {
+                color[i] = "white";
                 if (rootNode[i] != i)
                 {
                     children[i].Add(rootNode[i]);
                     children[rootNode[i]].Add(i);
                 }
             }
+
+            colorCluster = new RGBPixel[numOfClusters];
+            for (int i=0;i<distinctColors.Count;i++)
+            {
+                if(color[i]=="white")
+                {
+                    clusterSize = 0;
+                    j++;
+                    colorCluster[j].red = distinctColors[i].red;
+                    colorCluster[j].blue = distinctColors[i].blue;
+                    colorCluster[j].green = distinctColors[i].green;
+                    dfs(i);
+                    int colorRed = (int)colorCluster[j].red;
+                    colorRed = ((int)colorCluster[j].red / (int)clusterSize);
+
+                    int colorBlue = (int)colorCluster[j].blue;
+                    colorBlue = ((int)colorCluster[j].blue / (int)clusterSize);
+
+                    int colorGreen = (int)colorCluster[j].green;
+                    colorGreen = ((int)colorCluster[j].green / (int)clusterSize);
+                }
+            }
         }
+
+
+        public static void dfs(int s)//s=0
+        {
+            clusterSize++;
+            color[s] = "gray";
+            foreach (int i in children[s])
+            {
+                if (color[i] == "white")
+                {
+                    colorCluster[j].red += distinctColors[i].red;
+                    colorCluster[j].blue += distinctColors[i].blue;
+                    colorCluster[j].green += distinctColors[i].green;
+                    dfs(i);
+                }
+
+                if (color[i] == "gray")
+                {
+                    break;
+                }
+            }
+            color[s] = "black";
+        }
+
 
         private void MainForm_Load(object sender, EventArgs e)
         {
