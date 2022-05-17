@@ -157,7 +157,24 @@ namespace ImageQuantization
                 }
                 rootNode[hekha] = hekha;
                 colorWeight[hekha] = -1;
+            }
+        }
 
+        public static void makeChildren()
+        {
+            //adding the children of each node in the clusters
+            List<int>[] children = new List<int>[distinctColors.Count];
+            for (int i = 0; i < distinctColors.Count; i++)
+            {
+                children[i] = new List<int>(distinctColors.Count); //------> O(1)
+            }
+            for (int i = 0; i < distinctColors.Count; i++)
+            {
+                if (rootNode[i] != i)
+                {
+                    children[i].Add(rootNode[i]);
+                    children[rootNode[i]].Add(i);
+                }
             }
         }
 
