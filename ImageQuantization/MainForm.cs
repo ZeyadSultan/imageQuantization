@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
@@ -27,6 +28,9 @@ namespace ImageQuantization
         public static string[] dcolor;
 
 
+        public static Stopwatch stopWatch;
+
+
         public MainForm()
         {
             InitializeComponent();
@@ -50,23 +54,29 @@ namespace ImageQuantization
 
         private void btnGaussSmooth_Click(object sender, EventArgs e)
         {
-            double sigma = double.Parse(txtGaussSigma.Text);
+            int sigma = int.Parse(txtGaussSigma.Text);
             int maskSize = (int)nudMaskSize.Value;
 
             //  ImageMatrix = ImageOperations.GaussianFilter1D(ImageMatrix, maskSize, sigma);
 
-            RGBPixel[,] res_ImageMatrix = res(ImageMatrix, maskSize);
-            NewColors(res_ImageMatrix);
+            RGBPixel[,] res_ImageMatrix = res(ImageMatrix, sigma);
+            //NewColors(res_ImageMatrix);
 
             ImageOperations.DisplayImage(res_ImageMatrix, pictureBox2);
         }
 
         public static RGBPixel[,] res(RGBPixel[,] ImageMatrix, int numOfClusters)
         {
+            stopWatch = new Stopwatch();
+            stopWatch.Start();
             get_distinct_colors(ImageMatrix);
-            mst();
-            makeClusters(ImageMatrix, numOfClusters);
-            makeChildren(ImageMatrix, numOfClusters);
+            Console.WriteLine("get_distinct_colors: " + stopWatch.Elapsed);
+            int[] rootNode = mst();
+            Console.WriteLine("mst: " + stopWatch.Elapsed);
+
+            quantizeimg(rootNode, numOfClusters, ImageMatrix);
+            Console.WriteLine("quantizeimg: " + stopWatch.Elapsed);
+            stopWatch.Stop();
             return ImageMatrix;
         }
 
@@ -93,7 +103,7 @@ namespace ImageQuantization
             }
 
             Console.WriteLine(distinctColors.Count);
-            rootNode = new int[distinctColors.Count];
+
         }
 
 
@@ -108,8 +118,9 @@ namespace ImageQuantization
 
 
         // function to build the minimum spanning tree 
-        public static void mst()
+        public static int[] mst()
         {
+            rootNode = new int[distinctColors.Count];
             colorWeight = new double[distinctColors.Count];
 
             bool[] visited = new bool[distinctColors.Count];
@@ -118,7 +129,7 @@ namespace ImageQuantization
             {
                 colorWeight[i] = double.MaxValue;
             }
-            rootNode[0] = 0;
+            rootNode[0] = -1;
             colorWeight[0] = 0;
             for (int j = 0; j < distinctColors.Count; j++)
             {
@@ -152,177 +163,85 @@ namespace ImageQuantization
             }
             Console.WriteLine("mst cost : " + mst_total_cost);
             children = new List<int>[distinctColors.Count];
-
+            return rootNode;
 
         }
 
-        public static void makeClusters(RGBPixel[,] ImageMatrix, int numOfClusters)
+        public static void quantizeimg(int[] rootNode, int numOfClusters, RGBPixel[,] ImageMatrix)
         {
-            clusterFinalColor = new RGBPixel[numOfClusters];
+            List<Relation> l = new List<Relation>();
+            for (int i = 1; i < rootNode.Length; i++)
+            {
+                Relation r = new Relation(rootNode[i], i, colorWeight[i]);
+                l.Add(r);
+            }
+            l.Sort();
             for (int i = 0; i < numOfClusters - 1; i++)
             {
-                double maxWeight = 0;
-                int hekha = 0;
-                for (int j = 0; j < distinctColors.Count; j++)
+                l.RemoveAt(l.Count - 1);
+            }
+
+            Graph.AddRel(l);
+            List<List<RGBPixel>> clus = Graph.getClusters(distinctColors.Count);
+            List<RGBPixel> newColorFromIndex = new List<RGBPixel>();
+            for (int i = 0; i < clus.Count; i++)
+            {
+                int red = 0, blue = 0, green = 0;
+                for (int j = 0; j < clus[i].Count; j++)
                 {
-                    if (colorWeight[j] > maxWeight)
-                    {
-                        maxWeight = colorWeight[j];
-                        hekha = j;
-                    }
+                    RGBPixel currPixel = clus[i][j];
+                    red += currPixel.red;
+                    blue += currPixel.blue;
+                    green += currPixel.green;
                 }
-                rootNode[hekha] = hekha;
-                colorWeight[hekha] = -1;
+                RGBPixel newp;
+                //newp.red = (byte)Math.Ceiling((int)red / clus[i].Count);
+                newp.red = (byte)(red / clus[i].Count);
+                newp.blue = (byte)(blue / clus[i].Count);
+                newp.green = (byte)(green / clus[i].Count);
+                newColorFromIndex.Add(newp);
             }
-        }
-
-        public static void makeChildren(RGBPixel[,] ImageMatrix, int numOfClusters)
-        {
-            dcolor = new string[distinctColors.Count];
-
-            //adding the children of each node in the clusters
-            for (int i = 0; i < distinctColors.Count; i++)
+            Dictionary<int, int> pixelClusterIndex = new Dictionary<int, int>();
+            for (int i = 0; i < clus.Count; i++)
             {
-                children[i] = new List<int>(distinctColors.Count);
-            }
-            for (int i = 0; i < distinctColors.Count; i++)
-            {
-                dcolor[i] = "white";
-                if (rootNode[i] != i)
+                var list = clus[i];
+                for (int j = 0; j < list.Count; j++)
                 {
-                    children[i].Add(rootNode[i]);
-                    children[rootNode[i]].Add(i);
+                    RGBPixel currPixel = list[j];
+                    pixelClusterIndex.Add(pixelToInt(currPixel), i);
                 }
+
             }
 
-
-
-            for (int i = 0; i < distinctColors.Count; i++)
-            {
-
-                if (dcolor[i] == "white")
-                {
-                    clusterSize = 0;
-                    j++;
-                    colorRed = 0;
-                    colorBlue = 0;
-                    colorGreen = 0;
-                    dfs(i);
-
-                    colorRed = colorRed / clusterSize;
-
-                    colorBlue = colorBlue / clusterSize;
-
-                    colorGreen = colorGreen / clusterSize;
-
-                    colorCluster[distinctColors[i]] = j;
-
-                    clusterFinalColor[j].red = (byte)colorRed;
-                    clusterFinalColor[j].blue = (byte)colorBlue;
-                    clusterFinalColor[j].green = (byte)colorGreen;
-                    /*colorCluster[i].blue = (byte)colorBlue;
-                    colorCluster[i].red = (byte)colorRed;
-                    colorCluster[i].green = (byte)colorGreen;*/
-                }
-            }
-
-
-
-
-
-
-
-
-            for (int i = 0; i < distinctColors.Count; i++)
-            {
-                for (int j = 0; j < numOfClusters; j++)
-                {
-
-                    if (colorCluster[distinctColors[i]] == j)
-                    {
-                        distinctColors[i] = clusterFinalColor[j];
-                    }
-                }
-            }
-
-
-
-
-
-
-
-        }
-
-
-
-
-        /// <summary>
-        /// ///////////////////////////////////////////////////////
-        public static RGBPixel[,] NewColors(RGBPixel[,] ImageMatrix)
-        {
-            RGBPixel[,,] RGB = new RGBPixel[260, 260, 260];
-            for (int x = 0; x < distinctColors.Count; x++)
-            {
-                RGBPixel Clr_map = distinctColors[x];
-                RGB[distinctColors[x].red, distinctColors[x].green, distinctColors[x].blue] = Clr_map;
-            }
             int length = ImageMatrix.GetLength(0);
             int width = ImageMatrix.GetLength(1);
             for (long i = 0; i < length; i++)
             {
                 for (long j = 0; j < width; j++)
                 {
-                    RGBPixel new_Clr;
-                    new_Clr = RGB[ImageMatrix[i, j].red, ImageMatrix[i, j].green, ImageMatrix[i, j].blue];
-                    ImageMatrix[i, j].red = new_Clr.red;
-                    ImageMatrix[i, j].green = new_Clr.green;
-                    ImageMatrix[i, j].blue = new_Clr.blue;
+                    RGBPixel oldP = ImageMatrix[i, j];
+                    int clusIndexOld = pixelClusterIndex[pixelToInt(oldP)];
+                    RGBPixel newP = newColorFromIndex[clusIndexOld];
+                    ImageMatrix[i, j] = newP;
                 }
             }
-            return ImageMatrix;
+
         }
-        /// </summary>
-        /// <param name="s"></param>
 
 
-
-
-
-        public static void dfs(int s)//s=0
+        static void printblez(List<List<RGBPixel>> clus)
         {
-
-            clusterSize++;
-            dcolor[s] = "gray";
-            colorCluster.Add(distinctColors[s], j);
-            //colorCluster[distinctColors[s]] =  j;
-
-
-
-
-            colorRed += distinctColors[s].red;
-            colorBlue += distinctColors[s].blue;
-            colorGreen += distinctColors[s].green;
-
-            foreach (int i in children[s])
+            foreach (var l in clus)
             {
-                if (dcolor[i] == "white")
+                Console.WriteLine("clsuter number ");
+                foreach (var n in l)
                 {
-                    dfs(i);
+                    Console.WriteLine("rgb(" + n.red.ToString() + "," + n.green.ToString() + "," + n.blue.ToString() + ")");
                 }
-
-                if (dcolor[i] == "gray")
-                {
-                    break;
-                }
+                Console.WriteLine();
+                Console.WriteLine("--------------------------------------");
             }
-
-
-
-
-            dcolor[s] = "black";
-
         }
-
 
         private void MainForm_Load(object sender, EventArgs e)
         {
@@ -330,6 +249,35 @@ namespace ImageQuantization
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+
+        public static int pixelToInt(RGBPixel color)
+        {
+            int a = 0;
+            int r = color.red;
+            int g = color.green;
+            int b = color.blue;
+
+            return a << 24 | r << 16 | g << 8 | b;
+        }
+
+        public static RGBPixel intToPixel(int argb)
+        {
+            int a = argb >> 24;
+            int r = argb << 8 >> 24;
+            int g = argb << 16 >> 24;
+            int b = argb << 24 >> 24;
+            RGBPixel p;
+            p.red = (byte)r;
+            p.blue = (byte)b;
+            p.green = (byte)g;
+            return p;
+        }
+
+        private void panel1_Paint_1(object sender, PaintEventArgs e)
         {
 
         }
