@@ -183,15 +183,17 @@ namespace ImageQuantization
             for (int i = 0; i < distinctColors.Count; i++)
             {
                 children[i] = new List<int>(distinctColors.Count);
+            }
+            for (int i = 0; i < distinctColors.Count; i++)
+            {
                 color[i] = "white";
-                /*Console.WriteLine(i);
+                Console.WriteLine(i);
                 if (rootNode[i] != i)
                 {
                     children[i].Add(rootNode[i]);
                     children[rootNode[i]].Add(i);
-                }*/
+                }
             }
-            
 
 
 
