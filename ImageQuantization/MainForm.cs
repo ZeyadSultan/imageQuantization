@@ -54,9 +54,9 @@ namespace ImageQuantization
             int maskSize = (int)nudMaskSize.Value;
 
             //  ImageMatrix = ImageOperations.GaussianFilter1D(ImageMatrix, maskSize, sigma);
-            NewColors(ImageMatrix);
 
             RGBPixel[,] res_ImageMatrix = res(ImageMatrix, maskSize);
+            NewColors(res_ImageMatrix);
 
             ImageOperations.DisplayImage(res_ImageMatrix, pictureBox2);
         }
@@ -66,6 +66,7 @@ namespace ImageQuantization
             get_distinct_colors(ImageMatrix);
             mst();
             makeClusters(ImageMatrix, numOfClusters);
+            makeChildren(ImageMatrix, numOfClusters);
             return ImageMatrix;
         }
 
@@ -93,9 +94,9 @@ namespace ImageQuantization
 
             Console.WriteLine(distinctColors.Count);
             rootNode = new int[distinctColors.Count];
-
         }
 
+        
 
         //calculate distance function 
         public static double calc_dist(RGBPixel d1, RGBPixel d2)
@@ -150,9 +151,11 @@ namespace ImageQuantization
                 mst_total_cost += Math.Sqrt(colorWeight[i]);
             }
             Console.WriteLine("mst cost : " + mst_total_cost);
+            children = new List<int>[distinctColors.Count];
+
 
         }
-
+        
         public static void makeClusters(RGBPixel[,] ImageMatrix, int numOfClusters)
         {
             clusterFinalColor = new RGBPixel[numOfClusters];
@@ -177,20 +180,18 @@ namespace ImageQuantization
         public static void makeChildren(RGBPixel[,] ImageMatrix, int numOfClusters)
         {
             //adding the children of each node in the clusters
-            children = new List<int>[distinctColors.Count];
             for (int i = 0; i < distinctColors.Count; i++)
             {
                 children[i] = new List<int>(distinctColors.Count);
-            }
-            for (int i = 0; i < distinctColors.Count; i++)
-            {
                 color[i] = "white";
+                /*Console.WriteLine(i);
                 if (rootNode[i] != i)
                 {
                     children[i].Add(rootNode[i]);
                     children[rootNode[i]].Add(i);
-                }
+                }*/
             }
+            
 
 
 
@@ -273,12 +274,12 @@ namespace ImageQuantization
         /// ///////////////////////////////////////////////////////
         public static RGBPixel[,] NewColors(RGBPixel[,] ImageMatrix)
         {
-            RGBPixel[,,] RGB = new RGBPixel[126, 126, 126];
-            /*for (int x = 0; x < distinctColors.Count; x++)
+            RGBPixel[,,] RGB = new RGBPixel[260, 260, 260];
+            for (int x = 0; x < distinctColors.Count; x++)
             {
                 RGBPixel Clr_map = distinctColors[x];
                 RGB[distinctColors[x].red, distinctColors[x].green, distinctColors[x].blue] = Clr_map;
-            }*/
+            }
             int length = ImageMatrix.GetLength(0);
             int width = ImageMatrix.GetLength(1);
             for (long i = 0; i < length; i++)
@@ -286,7 +287,7 @@ namespace ImageQuantization
                 for (long j = 0; j < width; j++)
                 {
                     RGBPixel new_Clr;
-                    new_Clr = RGB[125, 0, 0];
+                    new_Clr = RGB[ImageMatrix[i, j].red, ImageMatrix[i, j].green, ImageMatrix[i, j].blue];
                     ImageMatrix[i, j].red = new_Clr.red;
                     ImageMatrix[i, j].green = new_Clr.green;
                     ImageMatrix[i, j].blue = new_Clr.blue;
