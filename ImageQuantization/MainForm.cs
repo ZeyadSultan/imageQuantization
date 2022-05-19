@@ -14,7 +14,7 @@ namespace ImageQuantization
         public static List<RGBPixel> distinctColors = new List<RGBPixel>();
         public static Dictionary<RGBPixel, int> colorCluster = new Dictionary<RGBPixel, int>();
         public static byte clusterSize;
-        public static int j = 0;
+        public static int j = -1;
         public static int colorRed = 0;
         public static int colorBlue = 0;
         public static int colorGreen = 0;
@@ -24,7 +24,7 @@ namespace ImageQuantization
         public static double mst_total_cost = 0;
         public static List<KeyValuePair<RGBPixel, RGBPixel>> mst_tree = new List<KeyValuePair<RGBPixel, RGBPixel>>();
         public static RGBPixel[] clusterFinalColor;
-
+        public static string[] dcolor;
 
 
         public MainForm()
@@ -96,7 +96,7 @@ namespace ImageQuantization
             rootNode = new int[distinctColors.Count];
         }
 
-        
+
 
         //calculate distance function 
         public static double calc_dist(RGBPixel d1, RGBPixel d2)
@@ -106,7 +106,7 @@ namespace ImageQuantization
             return dist;
         }
 
-        
+
         // function to build the minimum spanning tree 
         public static void mst()
         {
@@ -155,7 +155,7 @@ namespace ImageQuantization
 
 
         }
-        
+
         public static void makeClusters(RGBPixel[,] ImageMatrix, int numOfClusters)
         {
             clusterFinalColor = new RGBPixel[numOfClusters];
@@ -175,10 +175,11 @@ namespace ImageQuantization
                 colorWeight[hekha] = -1;
             }
         }
-        public static string[] color = new string[distinctColors.Count];
 
         public static void makeChildren(RGBPixel[,] ImageMatrix, int numOfClusters)
         {
+            dcolor = new string[distinctColors.Count];
+
             //adding the children of each node in the clusters
             for (int i = 0; i < distinctColors.Count; i++)
             {
@@ -186,8 +187,7 @@ namespace ImageQuantization
             }
             for (int i = 0; i < distinctColors.Count; i++)
             {
-                color[i] = "white";
-                Console.WriteLine(i);
+                dcolor[i] = "white";
                 if (rootNode[i] != i)
                 {
                     children[i].Add(rootNode[i]);
@@ -199,15 +199,16 @@ namespace ImageQuantization
 
             for (int i = 0; i < distinctColors.Count; i++)
             {
-                if (color[i] == "white")
+
+                if (dcolor[i] == "white")
                 {
-                    clusterSize = 1;
+                    clusterSize = 0;
                     j++;
                     colorRed = 0;
                     colorBlue = 0;
                     colorGreen = 0;
                     dfs(i);
-                    
+
                     colorRed = colorRed / clusterSize;
 
                     colorBlue = colorBlue / clusterSize;
@@ -225,36 +226,19 @@ namespace ImageQuantization
                 }
             }
 
-            
-
-            for (int i = 0; i < colorCluster.Count; i++)
-            {
-                
-
-                for (int j = 0; j < numOfClusters; j++)
-                {
 
 
-                    /*colorRed += ((int)colorCluster[i][j].red);
 
-                    colorBlue += ((int)colorCluster[i][j].blue);
 
-                    colorGreen += ((int)colorCluster[i][j].green);*/
 
-                }
-                /*clusterFinalColor[i].red = (byte)(colorRed / clusterSize);
-                clusterFinalColor[i].blue = (byte)(colorBlue / clusterSize);
-                clusterFinalColor[i].green = (byte)(colorGreen / clusterSize);*/
-            }
-
-            
 
 
             for (int i = 0; i < distinctColors.Count; i++)
             {
-                for(int j = 0; j < numOfClusters; j++)
+                for (int j = 0; j < numOfClusters; j++)
                 {
-                    if(colorCluster[distinctColors[i]] == j)
+
+                    if (colorCluster[distinctColors[i]] == j)
                     {
                         distinctColors[i] = clusterFinalColor[j];
                     }
@@ -262,9 +246,9 @@ namespace ImageQuantization
             }
 
 
-            
 
-            
+
+
 
 
         }
@@ -306,10 +290,14 @@ namespace ImageQuantization
 
         public static void dfs(int s)//s=0
         {
- 
+
             clusterSize++;
-            color[s] = "gray";
-            colorCluster[distinctColors[s]] = j;
+            dcolor[s] = "gray";
+            colorCluster.Add(distinctColors[s], j);
+            //colorCluster[distinctColors[s]] =  j;
+
+
+
 
             colorRed += distinctColors[s].red;
             colorBlue += distinctColors[s].blue;
@@ -317,26 +305,31 @@ namespace ImageQuantization
 
             foreach (int i in children[s])
             {
-                if (color[i] == "white")
+                if (dcolor[i] == "white")
                 {
                     dfs(i);
                 }
 
-                if (color[i] == "gray")
+                if (dcolor[i] == "gray")
                 {
                     break;
                 }
             }
 
 
-            
 
-            color[s] = "black";
+
+            dcolor[s] = "black";
 
         }
 
 
         private void MainForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
         {
 
         }
